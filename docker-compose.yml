@@ -1,0 +1,117 @@
+services:
+  # PostgreSQL Database
+  # Stores patient, person, and visit data
+  postgres:
+    image: postgres:15
+    container_name: healthcare_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: healthcaredb
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist database data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  # Message broker for Celery - queues tasks for processing
+  redis:
+    image: redis:7-alpine
+    container_name: healthcare_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LocalStack
+  # Simulates AWS S3 locally for development
+  localstack:
+    image: localstack/localstack:latest
+    container_name: healthcare_localstack
+    ports:
+      - "4566:4566"  # LocalStack gateway
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/var/lib/localstack
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Application
+  # Main API server handling HTTP requests
+  api:
+    build: .
+    container_name: healthcare_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount code for hot-reloading during development
+      - .:/app
+      # Shared volume for uploads
+      - uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/healthcaredb
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - S3_BUCKET_NAME=patient-intake
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+
+  # Celery Worker
+  # Processes background tasks (CSV processing workflow)
+  worker:
+    build: .
+    container_name: healthcare_worker
+    command: celery -A worker.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+      - uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/healthcaredb
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - S3_BUCKET_NAME=patient-intake
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+
+volumes:
+  postgres_data:     # Persists PostgreSQL data
+  localstack_data:   # Persists LocalStack data
+  uploads:           # Shared upload directory

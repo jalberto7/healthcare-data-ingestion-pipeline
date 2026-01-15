@@ -1,0 +1,30 @@
+# FastAPI and Web Framework
+fastapi==0.109.0          # Modern web framework for building APIs - high performance, easy to use
+uvicorn[standard]==0.27.0  # ASGI server to run FastAPI - handles async requests efficiently
+
+# Database
+sqlalchemy==2.0.25        # ORM for database operations - maps Python classes to database tables
+psycopg2-binary==2.9.9    # PostgreSQL driver - allows Python to communicate with PostgreSQL
+alembic==1.13.1           # Database migration tool - manages schema changes over time
+
+# Async Task Queue
+celery==5.3.6             # Distributed task queue - handles background jobs asynchronously
+redis==5.0.1              # Message broker for Celery - fast in-memory data store for task queuing
+
+# AWS S3 (LocalStack)
+boto3==1.34.34            # AWS SDK for Python - interacts with S3 (and LocalStack S3)
+
+# Data Processing
+pandas==2.1.4             # Data manipulation library - used for CSV processing
+
+# Validation and Serialization
+pydantic==2.5.3           # Data validation library - used by FastAPI for request/response models
+pydantic-settings==2.1.0  # Settings management - loads configuration from environment variables
+
+# Utilities
+python-dotenv==1.0.0      # Load environment variables from .env file
+python-multipart==0.0.6   # Required for file uploads in FastAPI
+
+# Development and Testing
+pytest==7.4.4             # Testing framework
+httpx==0.26.0             # Async HTTP client for testing FastAPI
