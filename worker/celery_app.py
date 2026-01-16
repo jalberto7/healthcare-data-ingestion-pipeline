@@ -161,7 +161,7 @@ def process_csv_workflow(self, csv_filename: str):
                 except Exception as e:
                     error_msg = f"Error processing record {processed_count} (MRN={row.get('mrn', 'unknown')}): {str(e)}"
                     print(f"    ERROR: {error_msg}")
-                        errors.append(error_msg)
+                    errors.append(error_msg)
                     # Continue processing other records even if one fails
                     continue
             
