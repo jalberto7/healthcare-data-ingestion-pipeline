@@ -111,6 +111,20 @@ class PatientService:
             print(f"Updated person info for patient MRN={patient.mrn}")
     
     @staticmethod
+    def get_visit_by_account_number(db: Session, visit_account_number: str) -> Optional[Visit]:
+        """
+        Find a visit by its account number
+        
+        Args:
+            db: Database session
+            visit_account_number: Unique visit identifier
+            
+        Returns:
+            Visit object if found, None otherwise
+        """
+        return db.query(Visit).filter(Visit.visit_account_number == visit_account_number).first()
+    
+    @staticmethod
     def create_visit(db: Session, patient_id: int, visit_account_number: str,
                     visit_date: date, reason: str) -> Visit:
         """
@@ -137,6 +151,40 @@ class PatientService:
         db.refresh(visit)
         
         print(f"Created visit: {visit_account_number} for patient_id={patient_id}")
+        return visit
+    
+    @staticmethod
+    def update_visit(db: Session, visit: Visit, visit_date: date, reason: str) -> Visit:
+        """
+        Update an existing visit's information
+        Only updates if values have changed
+        
+        Args:
+            db: Database session
+            visit: Visit object to update
+            visit_date: New visit date
+            reason: New reason for visit
+            
+        Returns:
+            Updated Visit object
+        """
+        updated = False
+        
+        if visit.visit_date != visit_date:
+            visit.visit_date = visit_date
+            updated = True
+        
+        if visit.reason != reason:
+            visit.reason = reason
+            updated = True
+        
+        if updated:
+            db.commit()
+            db.refresh(visit)
+            print(f"Updated visit: {visit.visit_account_number}")
+        else:
+            print(f"Visit {visit.visit_account_number} unchanged")
+        
         return visit
     
     @staticmethod

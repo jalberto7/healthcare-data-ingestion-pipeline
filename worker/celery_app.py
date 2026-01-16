@@ -77,6 +77,7 @@ def process_csv_workflow(csv_filename: str):
         patients_created = 0
         patients_updated = 0
         visits_created = 0
+        visits_updated = 0
         errors = []
         
         for idx, row in enumerate(records, 1):
@@ -113,16 +114,30 @@ def process_csv_workflow(csv_filename: str):
                     )
                     patients_created += 1
                 
-                # Create visit (always insert as new record)
-                print(f"    Creating visit: {row['visit_account_number']}")
-                visit = PatientService.create_visit(
-                    db=db,
-                    patient_id=patient.id,
-                    visit_account_number=row['visit_account_number'],
-                    visit_date=visit_date,
-                    reason=row['reason']
-                )
-                visits_created += 1
+                # Check if visit exists by visit_account_number
+                visit = PatientService.get_visit_by_account_number(db, row['visit_account_number'])
+                
+                if visit:
+                    # Visit exists - update visit information
+                    print(f"    Visit exists ({row['visit_account_number']}), updating...")
+                    visit = PatientService.update_visit(
+                        db=db,
+                        visit=visit,
+                        visit_date=visit_date,
+                        reason=row['reason']
+                    )
+                    visits_updated += 1
+                else:
+                    # Visit doesn't exist - create new visit
+                    print(f"    Creating new visit: {row['visit_account_number']}")
+                    visit = PatientService.create_visit(
+                        db=db,
+                        patient_id=patient.id,
+                        visit_account_number=row['visit_account_number'],
+                        visit_date=visit_date,
+                        reason=row['reason']
+                    )
+                    visits_created += 1
                 
             except Exception as e:
                 error_msg = f"Error processing record {idx} (MRN={row.get('mrn', 'unknown')}): {str(e)}"
@@ -146,6 +161,7 @@ def process_csv_workflow(csv_filename: str):
             "patients_created": patients_created,
             "patients_updated": patients_updated,
             "visits_created": visits_created,
+            "visits_updated": visits_updated,
             "errors": errors,
             "error_count": len(errors)
         }
