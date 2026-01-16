@@ -4,7 +4,9 @@ Handles all interactions with AWS S3 (LocalStack)
 Provides upload and download functionality for CSV files
 """
 import boto3
+import os
 from botocore.client import Config
+from boto3.s3.transfer import TransferConfig
 from app.config import settings
 
 
@@ -28,7 +30,7 @@ class S3Service:
     
     def upload_file(self, file_path: str, object_name: str) -> bool:
         """
-        Upload a file to S3 bucket
+        Upload a file to S3 bucket with automatic multipart for large files
         
         Args:
             file_path: Local path to the file to upload
@@ -38,7 +40,30 @@ class S3Service:
             True if upload successful, False otherwise
         """
         try:
-            self.s3_client.upload_file(file_path, self.bucket_name, object_name)
+            file_size = os.path.getsize(file_path)
+            
+            # Use multipart upload for files > 10MB
+            if file_size > 10 * 1024 * 1024:  # 10MB threshold
+                print(f"Using multipart upload for large file ({file_size / (1024*1024):.2f} MB)")
+                
+                # Configure multipart upload
+                config = TransferConfig(
+                    multipart_threshold=10 * 1024 * 1024,  # 10MB
+                    max_concurrency=10,
+                    multipart_chunksize=10 * 1024 * 1024,  # 10MB chunks
+                    use_threads=True
+                )
+                
+                self.s3_client.upload_file(
+                    file_path,
+                    self.bucket_name,
+                    object_name,
+                    Config=config
+                )
+            else:
+                # Regular upload for smaller files
+                self.s3_client.upload_file(file_path, self.bucket_name, object_name)
+            
             print(f"Successfully uploaded {file_path} to s3://{self.bucket_name}/{object_name}")
             return True
         except Exception as e:

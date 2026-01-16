@@ -188,6 +188,33 @@ class PatientService:
         return visit
     
     @staticmethod
+    def bulk_create_visits(db: Session, visits_data: List[dict]) -> int:
+        """
+        Create multiple visits in one bulk operation
+        Much faster than individual inserts for large datasets
+        
+        Args:
+            db: Database session
+            visits_data: List of dictionaries with visit data
+                        Each dict should have: patient_id, visit_account_number, visit_date, reason
+        
+        Returns:
+            Number of visits created
+        """
+        try:
+            if not visits_data:
+                return 0
+            
+            db.bulk_insert_mappings(Visit, visits_data)
+            db.commit()
+            print(f"Bulk created {len(visits_data)} visits")
+            return len(visits_data)
+        except Exception as e:
+            db.rollback()
+            print(f"Error in bulk create: {str(e)}")
+            raise e
+    
+    @staticmethod
     def get_patients_paginated(db: Session, page: int = 1, page_size: int = 10,
                                mrn: Optional[str] = None,
                                first_name: Optional[str] = None,

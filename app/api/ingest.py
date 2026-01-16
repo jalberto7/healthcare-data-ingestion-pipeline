@@ -35,6 +35,15 @@ async def ingest_data(records: List[VisitRecord], db: Session = Depends(get_db))
     Returns:
         IngestResponse with task ID and file information
     """
+    # Validate file size - prevent extremely large uploads
+    MAX_RECORDS = 50000  # Configurable limit
+    if len(records) > MAX_RECORDS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Payload too large. Maximum {MAX_RECORDS} records allowed per request. "
+                   f"Received {len(records)} records. Please split into smaller batches."
+        )
+    
     try:
         # Step 1: Create CSV file from records
         csv_service = CSVService()
